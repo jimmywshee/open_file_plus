@@ -38,7 +38,7 @@ import io.flutter.plugin.common.MethodChannel.Result;
  * OpenFilePlusPlugin
  */
 public class OpenFilePlusPlugin implements FlutterPlugin, MethodCallHandler, ActivityAware,
-    PluginRegistry.RequestPermissionsResultListener, PluginRegistry.ActivityResultListener {
+    ActivityPluginBinding.RequestPermissionsResultListener, ActivityPluginBinding.ActivityResultListener {
     private static final int REQUEST_CODE = 33432;
     private static final int RESULT_CODE = 0x12;
     private static final String TYPE_PREFIX_IMAGE = "image/";
@@ -412,36 +412,6 @@ public class OpenFilePlusPlugin implements FlutterPlugin, MethodCallHandler, Act
         Uri packageURI = Uri.parse("package:" + activity.getPackageName());
         Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, packageURI);
         activity.startActivityForResult(intent, RESULT_CODE);
-    }
-
-    @Override
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    public boolean onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if (requestCode != REQUEST_CODE) return false;
-        if (hasPermission(Manifest.permission.READ_EXTERNAL_STORAGE) && TYPE_STRING_APK.equals(typeString)) {
-            openApkFile();
-            return false;
-        }
-        for (String string : permissions) {
-            if (!hasPermission(string)) {
-                result(-3, "Permission denied: " + string);
-                return false;
-            }
-        }
-        startActivity();
-        return true;
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    public boolean onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        if (requestCode == RESULT_CODE) {
-            if (canInstallApk()) {
-                startActivity();
-            } else {
-                result(-3, "Permission denied: " + Manifest.permission.REQUEST_INSTALL_PACKAGES);
-            }
-        }
-        return false;
     }
 
     private void result(int type, String message) {
