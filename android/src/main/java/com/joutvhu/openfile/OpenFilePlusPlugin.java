@@ -33,12 +33,14 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
+import io.flutter.plugin.common.PluginRegistry.ActivityResultListener;
+import io.flutter.plugin.common.PluginRegistry.RequestPermissionsResultListener;
 
 /**
  * OpenFilePlusPlugin
  */
 public class OpenFilePlusPlugin implements FlutterPlugin, MethodCallHandler, ActivityAware,
-    ActivityPluginBinding.RequestPermissionsResultListener, ActivityPluginBinding.ActivityResultListener {
+    RequestPermissionsResultListener, ActivityResultListener {
     private static final int REQUEST_CODE = 33432;
     private static final int RESULT_CODE = 0x12;
     private static final String TYPE_PREFIX_IMAGE = "image/";
@@ -75,11 +77,9 @@ public class OpenFilePlusPlugin implements FlutterPlugin, MethodCallHandler, Act
         if (call.method.equals("open_file")) {
             this.result = result;
             filePath = call.argument("file_path");
-            if (call.hasArgument("type") && call.argument("type") != null) {
-                typeString = call.argument("type");
-            } else {
-                typeString = getFileType(filePath);
-            }
+            typeString = call.hasArgument("type") && call.argument("type") != null
+                ? call.argument("type")
+                : getFileType(filePath);
             if (pathRequiresPermission()) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     if (!isFileAvailable()) {
@@ -220,10 +220,10 @@ public class OpenFilePlusPlugin implements FlutterPlugin, MethodCallHandler, Act
             activity.startActivity(intent);
         } catch (ActivityNotFoundException e) {
             type = -1;
-            message = "No APP found to open this file。";
+            message = "No APP found to open this file.";
         } catch (Exception e) {
             type = -4;
-            message = "File opened incorrectly。";
+            message = "File opened incorrectly.";
         }
         result(type, message);
     }
@@ -453,5 +453,31 @@ public class OpenFilePlusPlugin implements FlutterPlugin, MethodCallHandler, Act
     @Override
     public void onDetachedFromActivity() {
         // Do nothing
+    }
+
+    @Override
+    public boolean onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == REQUEST_CODE) {
+            if (checkPermissions()) {
+                if (TYPE_STRING_APK.equals(typeString)) {
+                    openApkFile();
+                } else {
+                    startActivity();
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == RESULT_CODE) {
+            if (TYPE_STRING_APK.equals(typeString)) {
+                openApkFile();
+            }
+            return true;
+        }
+        return false;
     }
 }
